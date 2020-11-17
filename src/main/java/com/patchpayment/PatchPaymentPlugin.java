@@ -4,8 +4,10 @@ import com.google.common.collect.ObjectArrays;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
+import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -17,6 +19,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Provider;
+
+import java.util.Arrays;
 
 import static net.runelite.api.ItemID.*;
 
@@ -121,38 +125,41 @@ public class PatchPaymentPlugin extends Plugin {
 		super.shutDown();
 	}
 
+
 	@Subscribe
 	public void onMenuOpened(MenuOpened event) {
 		if (!config.checkWithExamine()) {
 			MenuEntry firstEntry = event.getFirstEntry();
+
 			if (firstEntry == null)
 				return;
 
 			int widgetId = firstEntry.getParam1();
-			if (widgetId != WidgetInfo.INVENTORY.getId())
-				return;
 
-			int itemId = firstEntry.getIdentifier();
-			if (itemId == -1)
-				return;
+			if (widgetId == WidgetInfo.INVENTORY.getId()) {
 
-			for (PairInterface pp : paymentPairList) {
-				if (pp.checkForId(itemId)) {
-					ItemComposition itemComposition = client.getItemDefinition(itemId);
+				int itemId = firstEntry.getIdentifier();
+				if (itemId == -1)
+					return;
 
-					MenuEntry[] entries = event.getMenuEntries();
+				for (PairInterface pp : paymentPairList) {
+					if (pp.checkForId(itemId)) {
+						ItemComposition itemComposition = client.getItemDefinition(itemId);
 
-					final MenuEntry checkPaymentEntry = new MenuEntry();
-					checkPaymentEntry.setOption(CHECK_PAYMENT);
-					checkPaymentEntry.setTarget("<col=ff9040>" + itemComposition.getName());
-					checkPaymentEntry.setIdentifier(itemId);
-					checkPaymentEntry.setParam1(widgetId);
-					checkPaymentEntry.setType(MenuAction.CC_OP.getId());
+						MenuEntry[] entries = event.getMenuEntries();
 
-					MenuEntry[] newEntries = ObjectArrays.concat(entries, checkPaymentEntry);
-					int menuEntryCount = newEntries.length;
-					ArrayUtils.swap(newEntries, menuEntryCount - 1, menuEntryCount - 2);
-					client.setMenuEntries(newEntries);
+						final MenuEntry checkPaymentEntry = new MenuEntry();
+						checkPaymentEntry.setOption(CHECK_PAYMENT);
+						checkPaymentEntry.setTarget("<col=ff9040>" + itemComposition.getName());
+						checkPaymentEntry.setIdentifier(itemId);
+						checkPaymentEntry.setParam1(widgetId);
+						checkPaymentEntry.setType(MenuAction.CC_OP.getId());
+
+						MenuEntry[] newEntries = ObjectArrays.concat(entries, checkPaymentEntry);
+						int menuEntryCount = newEntries.length;
+						ArrayUtils.swap(newEntries, menuEntryCount - 1, menuEntryCount - 2);
+						client.setMenuEntries(newEntries);
+					}
 				}
 			}
 		}
@@ -161,8 +168,15 @@ public class PatchPaymentPlugin extends Plugin {
 	@Subscribe
 	public void onMenuOptionClicked(MenuOptionClicked event) {
 		if (event.getMenuOption().equals(CHECK_PAYMENT) ||
-				(event.getMenuAction().getId() == MenuAction.EXAMINE_ITEM.getId() && config.checkWithExamine())) {
-			ItemComposition composition = client.getItemDefinition(event.getId());
+				(event.getMenuOption().equals("Examine") && config.checkWithExamine() )) {
+			ItemComposition composition;
+			if (event.getWidgetId() == WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId() && config.checkInBank())
+				composition = client.getItemDefinition(client.getWidget(WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER).getChild(event.getActionParam()).getItemId());
+			else if (event.getWidgetId() == WidgetInfo.BANK_ITEM_CONTAINER.getId() && config.checkInBank())
+				composition = client.getItemDefinition(client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER).getChild(event.getActionParam()).getItemId());
+			else
+				composition = client.getItemDefinition(event.getId());
+
 			for (PairInterface pp : paymentPairList) {
 				if (pp.checkForId(composition.getId())) {
 					String text = composition.getName();
@@ -176,6 +190,41 @@ public class PatchPaymentPlugin extends Plugin {
 						if (pair.preferredName != null)
 							text = pair.getPreferredName();
 						client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", String.format("%s %s patch can NOT be protected by a farmer%s.", grammatify(text).replace('a', 'A'), stripAndShrink(text), pair.getMessage()), "");
+					}
+				}
+			}
+		}
+	}
+
+	@Subscribe
+	public void onMenuEntryAdded(MenuEntryAdded event) {
+		if (!config.checkWithExamine() && config.checkInBank()) {
+			MenuEntry[] entries = client.getMenuEntries();
+			if (event.getOption().equals("Examine")) {
+				Widget container = null;
+				Widget item = null;
+				if (event.getActionParam1() == WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId()) {
+					container = client.getWidget(WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER);
+					item = container.getChild(event.getActionParam0());
+				} else if (event.getActionParam1() == WidgetInfo.BANK_ITEM_CONTAINER.getId()) {
+					container = client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER);
+					item = container.getChild(event.getActionParam0());
+				}
+
+				if (container != null && item != null) {
+					for (PairInterface pp : paymentPairList) {
+						if (pp.checkForId(item.getItemId())) {
+							MenuEntry checkPaymentEntry = new MenuEntry();
+							checkPaymentEntry.setParam0(event.getActionParam0());
+							checkPaymentEntry.setParam1(event.getActionParam1());
+							checkPaymentEntry.setTarget(event.getTarget());
+							checkPaymentEntry.setOption(CHECK_PAYMENT);
+							checkPaymentEntry.setType(MenuAction.RUNELITE.getId());
+							checkPaymentEntry.setIdentifier(item.getItemId());
+							entries = Arrays.copyOf(entries, entries.length + 1);
+							entries[entries.length - 1] = checkPaymentEntry;
+							client.setMenuEntries(entries);
+						}
 					}
 				}
 			}
@@ -269,4 +318,3 @@ public class PatchPaymentPlugin extends Plugin {
 		return "a";
 	}
 }
-
