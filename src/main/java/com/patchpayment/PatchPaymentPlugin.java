@@ -4,6 +4,7 @@ import com.google.common.collect.ObjectArrays;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
@@ -170,11 +171,14 @@ public class PatchPaymentPlugin extends Plugin {
 		if (event.getMenuOption().equals(CHECK_PAYMENT) ||
 				(event.getMenuOption().equals("Examine") && config.checkWithExamine() )) {
 			ItemComposition composition;
-			if (event.getWidgetId() == WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId() && config.checkInBank())
+			ChatMessageType messageType = ChatMessageType.ITEM_EXAMINE; // message type check added for compatibility with ExamineTooltip plugin
+			if (event.getWidgetId() == WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId() && config.checkInBank()) {
 				composition = client.getItemDefinition(client.getWidget(WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER).getChild(event.getActionParam()).getItemId());
-			else if (event.getWidgetId() == WidgetInfo.BANK_ITEM_CONTAINER.getId() && config.checkInBank())
+				messageType = ChatMessageType.GAMEMESSAGE;
+			} else if (event.getWidgetId() == WidgetInfo.BANK_ITEM_CONTAINER.getId() && config.checkInBank()) {
 				composition = client.getItemDefinition(client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER).getChild(event.getActionParam()).getItemId());
-			else
+				messageType = ChatMessageType.GAMEMESSAGE;
+			} else
 				composition = client.getItemDefinition(event.getId());
 
 			for (PairInterface pp : paymentPairList) {
@@ -184,12 +188,12 @@ public class PatchPaymentPlugin extends Plugin {
 						PaymentPair pair = (PaymentPair) pp;
 						if (pair.getPreferredName() != null)
 							text = pair.getPreferredName();
-						client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", String.format("A farmer will watch over %s %s patch for %s.", grammatify(text), stripAndShrink(text), pair.getPayment()), "");
+						client.addChatMessage(messageType, "", String.format("A farmer will watch over %s %s patch for %s.", grammatify(text), stripAndShrink(text), pair.getPayment()), null);
 					} else if(pp instanceof CustomPair) {
 						CustomPair pair = (CustomPair) pp;
 						if (pair.preferredName != null)
 							text = pair.getPreferredName();
-						client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", String.format("%s %s patch can NOT be protected by a farmer%s.", grammatify(text).replace('a', 'A'), stripAndShrink(text), pair.getMessage()), "");
+						client.addChatMessage(messageType, "", String.format("%s %s patch can NOT be protected by a farmer%s.", grammatify(text).replace('a', 'A'), stripAndShrink(text), pair.getMessage()), null);
 					}
 				}
 			}
@@ -220,7 +224,7 @@ public class PatchPaymentPlugin extends Plugin {
 							checkPaymentEntry.setTarget(event.getTarget());
 							checkPaymentEntry.setOption(CHECK_PAYMENT);
 							checkPaymentEntry.setType(MenuAction.RUNELITE.getId());
-							checkPaymentEntry.setIdentifier(item.getItemId());
+							checkPaymentEntry.setIdentifier(event.getIdentifier());
 							entries = Arrays.copyOf(entries, entries.length + 1);
 							entries[entries.length - 1] = checkPaymentEntry;
 							client.setMenuEntries(entries);
