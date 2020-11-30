@@ -153,6 +153,7 @@ public class PatchPaymentPlugin extends Plugin {
 						checkPaymentEntry.setOption(CHECK_PAYMENT);
 						checkPaymentEntry.setTarget("<col=ff9040>" + itemComposition.getName());
 						checkPaymentEntry.setIdentifier(itemId);
+						checkPaymentEntry.setParam0(entries[entries.length-1].getParam0());
 						checkPaymentEntry.setParam1(widgetId);
 						checkPaymentEntry.setType(MenuAction.CC_OP.getId());
 
@@ -178,8 +179,10 @@ public class PatchPaymentPlugin extends Plugin {
 			} else if (event.getWidgetId() == WidgetInfo.BANK_ITEM_CONTAINER.getId() && config.checkInBank()) {
 				composition = client.getItemDefinition(client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER).getChild(event.getActionParam()).getItemId());
 				messageType = ChatMessageType.GAMEMESSAGE;
-			} else
+			} else if (event.getWidgetId() == WidgetInfo.INVENTORY.getId()){
 				composition = client.getItemDefinition(event.getId());
+			} else
+				return;
 
 			for (PairInterface pp : paymentPairList) {
 				if (pp.checkForId(composition.getId())) {
