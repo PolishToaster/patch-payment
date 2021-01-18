@@ -141,10 +141,6 @@ public class PatchPaymentPlugin extends Plugin {
 
 			if (widgetId == WidgetInfo.INVENTORY.getId()) {
 
-				//Check if the first option is an Inventory Tag option. If so, we are editing tags. Stop trying to set the menu entry list
-				if (firstEntry.getOption().contentEquals(TAGS_MENU_SET) || firstEntry.getOption().contentEquals(TAGS_MENU_REMOVE))
-					return;
-
 				int itemId = firstEntry.getIdentifier();
 				if (itemId == -1)
 					return;
@@ -166,6 +162,13 @@ public class PatchPaymentPlugin extends Plugin {
 						MenuEntry[] newEntries = ObjectArrays.concat(entries, checkPaymentEntry);
 						int menuEntryCount = newEntries.length;
 						ArrayUtils.swap(newEntries, menuEntryCount - 1, menuEntryCount - 2);
+
+						//Re-check the menu entries so we don't overwrite already set lists
+						MenuEntry[] currentEntries = client.getMenuEntries();
+						if (currentEntries[0].getOption().contentEquals(TAGS_MENU_SET) || currentEntries[0].getOption().contentEquals(TAGS_MENU_REMOVE)) {
+							log.info(currentEntries[0].getOption());
+							return;
+						}
 						client.setMenuEntries(newEntries);
 					}
 				}
