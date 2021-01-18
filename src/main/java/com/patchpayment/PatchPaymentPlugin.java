@@ -35,7 +35,9 @@ import static net.runelite.api.ItemID.*;
 @Slf4j
 public class PatchPaymentPlugin extends Plugin {
 
-	private static final String CHECK_PAYMENT = "Check";
+	private final String CHECK_PAYMENT = "Check";
+	private final String TAGS_MENU_REMOVE = "Remove";
+	private final String TAGS_MENU_SET = "Mark";
 
 	PairInterface[] paymentPairList = {
 			// ALLOTMENT PAIRS
@@ -138,6 +140,10 @@ public class PatchPaymentPlugin extends Plugin {
 			int widgetId = firstEntry.getParam1();
 
 			if (widgetId == WidgetInfo.INVENTORY.getId()) {
+
+				//Check if the first option is an Inventory Tag option. If so, we are editing tags. Stop trying to set the menu entry list
+				if (firstEntry.getOption().contentEquals(TAGS_MENU_SET) || firstEntry.getOption().contentEquals(TAGS_MENU_REMOVE))
+					return;
 
 				int itemId = firstEntry.getIdentifier();
 				if (itemId == -1)
