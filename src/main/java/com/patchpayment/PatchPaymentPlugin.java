@@ -165,10 +165,9 @@ public class PatchPaymentPlugin extends Plugin {
 
 						//Re-check the menu entries so we don't overwrite already set lists
 						MenuEntry[] currentEntries = client.getMenuEntries();
-						if (currentEntries[0].getOption().contentEquals(TAGS_MENU_SET) || currentEntries[0].getOption().contentEquals(TAGS_MENU_REMOVE)) {
-							log.info(currentEntries[0].getOption());
+						if (currentEntries[1].getOption().contentEquals(TAGS_MENU_SET) || currentEntries[1].getOption().contentEquals(TAGS_MENU_REMOVE))
 							return;
-						}
+
 						client.setMenuEntries(newEntries);
 					}
 				}
