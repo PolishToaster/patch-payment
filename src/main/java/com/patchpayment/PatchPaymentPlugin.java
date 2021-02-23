@@ -44,7 +44,7 @@ public class PatchPaymentPlugin extends Plugin {
 			new PaymentPair("2 buckets of compost", new int[] {POTATO_SEED}),
 			new PaymentPair("1 full sack of potatoes", new int[] {ONION_SEED}),
 			new PaymentPair("1 full sack of onions", new int[] {CABBAGE_SEED}),
-			new PaymentPair("1 full sack of cabbages", new int[] {TOMATO_SEED}),
+			new PaymentPair("2 full sacks of cabbages", new int[] {TOMATO_SEED}),
 			new PaymentPair("10 jute fibres", new int[] {SWEETCORN_SEED}),
 			new PaymentPair("1 full basket of apples", new int[] {STRAWBERRY_SEED}),
 			new PaymentPair("10 curry leaves", new int[] {WATERMELON_SEED}),
