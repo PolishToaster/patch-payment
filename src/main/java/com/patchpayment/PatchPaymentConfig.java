@@ -4,6 +4,8 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
+import java.util.Locale;
+
 @ConfigGroup("patchpayment")
 public interface PatchPaymentConfig extends Config {
 
@@ -22,4 +24,12 @@ public interface PatchPaymentConfig extends Config {
 			position = 2
 	)
 	default boolean checkInBank() { return false; }
+
+	@ConfigItem(
+			keyName = "seedvaultitem",
+			name = "Enable Check in Seed Vault",
+			description = "Enables the ability to check payments while in the seed vault interface.",
+			position = 3
+	)
+	default boolean checkInVault() { return false; }
 }

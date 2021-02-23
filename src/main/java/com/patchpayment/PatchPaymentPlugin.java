@@ -169,6 +169,7 @@ public class PatchPaymentPlugin extends Plugin {
 							return;
 
 						client.setMenuEntries(newEntries);
+						return;
 					}
 				}
 			}
@@ -186,6 +187,12 @@ public class PatchPaymentPlugin extends Plugin {
 				messageType = ChatMessageType.GAMEMESSAGE;
 			} else if (event.getWidgetId() == WidgetInfo.BANK_ITEM_CONTAINER.getId() && config.checkInBank()) {
 				composition = client.getItemDefinition(client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER).getChild(event.getActionParam()).getItemId());
+				messageType = ChatMessageType.GAMEMESSAGE;
+			} else if (event.getWidgetId() == WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId() && config.checkInVault()) {
+				composition = client.getItemDefinition(client.getWidget(WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER).getChild(event.getActionParam()).getItemId());
+				messageType = ChatMessageType.GAMEMESSAGE;
+			} else if (event.getWidgetId() == WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId() && config.checkInVault()) {
+				composition = client.getItemDefinition(client.getWidget(WidgetInfo.SEED_VAULT_ITEM_CONTAINER).getChild(event.getActionParam()).getItemId());
 				messageType = ChatMessageType.GAMEMESSAGE;
 			} else if (event.getWidgetId() == WidgetInfo.INVENTORY.getId()){
 				composition = client.getItemDefinition(event.getId());
@@ -213,18 +220,29 @@ public class PatchPaymentPlugin extends Plugin {
 
 	@Subscribe
 	public void onMenuEntryAdded(MenuEntryAdded event) {
-		if (!config.checkWithExamine() && config.checkInBank()) {
+		if (!config.checkWithExamine()) {
 			MenuEntry[] entries = client.getMenuEntries();
 			if (event.getOption().equals("Examine")) {
 				Widget container = null;
 				Widget item = null;
-				if (event.getActionParam1() == WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId()) {
-					container = client.getWidget(WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER);
-					item = container.getChild(event.getActionParam0());
-				} else if (event.getActionParam1() == WidgetInfo.BANK_ITEM_CONTAINER.getId()) {
-					container = client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER);
-					item = container.getChild(event.getActionParam0());
-				}
+				if (config.checkInBank()) {
+					if (event.getActionParam1() == WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId()) {
+						container = client.getWidget(WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER);
+						item = container.getChild(event.getActionParam0());
+					} else if (event.getActionParam1() == WidgetInfo.BANK_ITEM_CONTAINER.getId()) {
+						container = client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER);
+						item = container.getChild(event.getActionParam0());
+					}
+				} else if (config.checkInVault()) {
+					if (event.getActionParam1() == WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId()) {
+						container = client.getWidget(WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER);
+						item = container.getChild(event.getActionParam0());
+					} else if (event.getActionParam1() == WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId()) {
+						container = client.getWidget(WidgetInfo.SEED_VAULT_ITEM_CONTAINER);
+						item = container.getChild(event.getActionParam0());
+					}
+				} else
+					return;
 
 				if (container != null && item != null) {
 					for (PairInterface pp : paymentPairList) {
@@ -239,6 +257,7 @@ public class PatchPaymentPlugin extends Plugin {
 							entries = Arrays.copyOf(entries, entries.length + 1);
 							entries[entries.length - 1] = checkPaymentEntry;
 							client.setMenuEntries(entries);
+							return;
 						}
 					}
 				}
