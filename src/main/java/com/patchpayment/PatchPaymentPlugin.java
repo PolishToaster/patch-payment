@@ -149,24 +149,18 @@ public class PatchPaymentPlugin extends Plugin {
 
                         MenuEntry[] entries = event.getMenuEntries();
 
-                        final MenuEntry checkPaymentEntry = new MenuEntry();
-                        checkPaymentEntry.setOption(CHECK_PAYMENT);
-                        checkPaymentEntry.setTarget("<col=ff9040>" + itemComposition.getName());
-                        checkPaymentEntry.setIdentifier(itemId);
-                        checkPaymentEntry.setParam0(entries[entries.length - 1].getParam0());
-                        checkPaymentEntry.setParam1(widgetId);
-                        checkPaymentEntry.setType(MenuAction.CC_OP.getId());
+                        client.createMenuEntry(2)
+                                .setOption(CHECK_PAYMENT)
+                                .setTarget("<col=ff9040>" + itemComposition.getName())
+                                .setIdentifier(itemId)
+                                .setParam0(entries[entries.length - 1].getParam0())
+                                .setParam1(widgetId)
+                                .setType(MenuAction.RUNELITE)
+                                .onClick(e -> { displayGameMessage(pp, itemComposition); });
 
-                        MenuEntry[] newEntries = ObjectArrays.concat(entries, checkPaymentEntry);
-                        int menuEntryCount = newEntries.length;
-                        ArrayUtils.swap(newEntries, menuEntryCount - 1, menuEntryCount - 2);
-
-                        //Re-check the menu entries so we don't overwrite already set lists
                         MenuEntry[] currentEntries = client.getMenuEntries();
                         if (currentEntries[1].getOption().contentEquals(TAGS_MENU_SET) || currentEntries[1].getOption().contentEquals(TAGS_MENU_REMOVE))
                             return;
-
-                        client.setMenuEntries(newEntries);
                         return;
                     }
                 }
@@ -174,43 +168,39 @@ public class PatchPaymentPlugin extends Plugin {
         }
     }
 
+    private void displayGameMessage(PairInterface pi, ItemComposition ic) {
+        client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", pi.getMessage(ic), null);
+    }
+
     @Subscribe
     public void onMenuOptionClicked(MenuOptionClicked event) {
-        if (event.getMenuOption().equals(CHECK_PAYMENT) ||
-                (event.getMenuOption().equals("Examine") && config.checkWithExamine())) {
-            ItemComposition composition;
-            ChatMessageType messageType = ChatMessageType.ITEM_EXAMINE; // message type check added for compatibility with ExamineTooltip plugin
-            if (event.getWidgetId() == WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId() && config.checkInBank()) {
-                composition = client.getItemDefinition(client.getWidget(WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER).getChild(event.getActionParam()).getItemId());
-                messageType = ChatMessageType.GAMEMESSAGE;
-            } else if (event.getWidgetId() == WidgetInfo.BANK_ITEM_CONTAINER.getId() && config.checkInBank()) {
-                composition = client.getItemDefinition(client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER).getChild(event.getActionParam()).getItemId());
-                messageType = ChatMessageType.GAMEMESSAGE;
-            } else if (event.getWidgetId() == WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId() && config.checkInVault()) {
-                composition = client.getItemDefinition(client.getWidget(WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER).getChild(event.getActionParam()).getItemId());
-                messageType = ChatMessageType.GAMEMESSAGE;
-            } else if (event.getWidgetId() == WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId() && config.checkInVault()) {
-                composition = client.getItemDefinition(client.getWidget(WidgetInfo.SEED_VAULT_ITEM_CONTAINER).getChild(event.getActionParam()).getItemId());
-                messageType = ChatMessageType.GAMEMESSAGE;
-            } else if (event.getWidgetId() == WidgetInfo.INVENTORY.getId()) {
+        if (event.getMenuOption().equals("Examine") && config.checkWithExamine()) {
+
+            ItemComposition composition = null;
+
+            int[][] acceptedIds = {
+                    { WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId(), config.checkInBank() ? 1 : 0 },
+                    { WidgetInfo.BANK_ITEM_CONTAINER.getId(), config.checkInBank() ? 1 : 0 },
+                    { WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId(), config.checkInVault() ? 1 : 0 },
+                    { WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId(), config.checkInVault() ? 1 : 0}
+            };
+
+            for (int i = 0; i < acceptedIds.length; i++) {
+                if (event.getParam1() == acceptedIds[i][0] && acceptedIds[i][1] == 1) {
+                    composition = client.getItemDefinition(client.getWidget(acceptedIds[i][0]).getChild(event.getParam0()).getItemId());
+                    break;
+                }
+            }
+
+            if (event.getParam1() == WidgetInfo.INVENTORY.getId())
                 composition = client.getItemDefinition(event.getId());
-            } else
+
+            if (composition == null)
                 return;
 
             for (PairInterface pp : paymentPairList) {
                 if (pp.checkForId(composition.getId())) {
-                    String text = composition.getName();
-                    if (pp instanceof PaymentPair) {
-                        PaymentPair pair = (PaymentPair) pp;
-                        if (pair.getPreferredName() != null)
-                            text = pair.getPreferredName();
-                        client.addChatMessage(messageType, "", String.format("A farmer will watch over %s %s patch for %s.", grammatify(text), stripAndShrink(text), pair.getPayment()), null);
-                    } else if (pp instanceof CustomPair) {
-                        CustomPair pair = (CustomPair) pp;
-                        if (pair.preferredName != null)
-                            text = pair.getPreferredName();
-                        client.addChatMessage(messageType, "", String.format("%s %s patch can NOT be protected by a farmer%s.", grammatify(text).replace('a', 'A'), stripAndShrink(text), pair.getMessage()), null);
-                    }
+                    displayGameMessage(pp, composition);
                 }
             }
         }
@@ -223,21 +213,17 @@ public class PatchPaymentPlugin extends Plugin {
             if (event.getOption().equals("Examine")) {
                 Widget container = null;
                 Widget item = null;
-                if (config.checkInBank()) {
-                    if (event.getActionParam1() == WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId()) {
-                        container = client.getWidget(WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER);
-                        item = container.getChild(event.getActionParam0());
-                    } else if (event.getActionParam1() == WidgetInfo.BANK_ITEM_CONTAINER.getId()) {
-                        container = client.getWidget(WidgetInfo.BANK_ITEM_CONTAINER);
-                        item = container.getChild(event.getActionParam0());
-                    }
-                }
-                if (config.checkInVault()) {
-                    if (event.getActionParam1() == WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId()) {
-                        container = client.getWidget(WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER);
-                        item = container.getChild(event.getActionParam0());
-                    } else if (event.getActionParam1() == WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId()) {
-                        container = client.getWidget(WidgetInfo.SEED_VAULT_ITEM_CONTAINER);
+
+                int[][] acceptedIds = {
+                        { WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId(), config.checkInBank() ? 1 : 0 },
+                        { WidgetInfo.BANK_ITEM_CONTAINER.getId(), config.checkInBank() ? 1 : 0 },
+                        { WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId(), config.checkInVault() ? 1 : 0 },
+                        { WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId(), config.checkInVault() ? 1 : 0}
+                };
+
+                for (int i = 0; i < acceptedIds.length; i++) {
+                    if (event.getActionParam1() == acceptedIds[i][0] && acceptedIds[i][1] == 1) {
+                        container = client.getWidget(acceptedIds[i][0]);
                         item = container.getChild(event.getActionParam0());
                     }
                 }
@@ -245,16 +231,17 @@ public class PatchPaymentPlugin extends Plugin {
                 if (container != null && item != null) {
                     for (PairInterface pp : paymentPairList) {
                         if (pp.checkForId(item.getItemId())) {
-                            MenuEntry checkPaymentEntry = new MenuEntry();
-                            checkPaymentEntry.setParam0(event.getActionParam0());
-                            checkPaymentEntry.setParam1(event.getActionParam1());
-                            checkPaymentEntry.setTarget(event.getTarget());
-                            checkPaymentEntry.setOption(CHECK_PAYMENT);
-                            checkPaymentEntry.setType(MenuAction.RUNELITE.getId());
-                            checkPaymentEntry.setIdentifier(event.getIdentifier());
-                            entries = Arrays.copyOf(entries, entries.length + 1);
-                            entries[entries.length - 1] = checkPaymentEntry;
-                            client.setMenuEntries(entries);
+                            ItemComposition ic = client.getItemDefinition(item.getItemId());
+
+                            client.createMenuEntry(entries.length - 1)
+                                    .setOption(CHECK_PAYMENT)
+                                    .setTarget(event.getTarget())
+                                    .setIdentifier(event.getIdentifier())
+                                    .setParam0(event.getActionParam0())
+                                    .setParam1(event.getActionParam1())
+                                    .setType(MenuAction.RUNELITE)
+                                    .onClick(e -> { displayGameMessage(pp, ic); });
+
                             return;
                         }
                     }
@@ -267,6 +254,8 @@ public class PatchPaymentPlugin extends Plugin {
         int[] pairedIDs = null;
 
         boolean checkForId(int id);
+
+        String getMessage(ItemComposition ic);
     }
 
     class PaymentPair implements PairInterface {
@@ -292,8 +281,11 @@ public class PatchPaymentPlugin extends Plugin {
             return false;
         }
 
-        public String getPayment() {
-            return this.payment;
+        public String getMessage(ItemComposition ic) {
+            String text = ic.getName();
+            if (getPreferredName() != null)
+                text = getPreferredName();
+            return String.format("A farmer will watch over %s %s patch for %s.", grammatify(text), stripAndShrink(text), this.payment);
         }
 
         public String getPreferredName() {
@@ -329,8 +321,11 @@ public class PatchPaymentPlugin extends Plugin {
             return false;
         }
 
-        public String getMessage() {
-            return message;
+        public String getMessage(ItemComposition ic) {
+            String text = ic.getName();
+            if (getPreferredName() != null)
+                text = getPreferredName();
+            return String.format("%s %s patch can NOT be protected by a farmer%s.", grammatify(text).replace('a', 'A'), stripAndShrink(text), this.message);
         }
 
         public String getPreferredName() {
