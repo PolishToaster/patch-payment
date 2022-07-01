@@ -1,6 +1,7 @@
 package com.patchpayment;
 
 import com.google.common.collect.ObjectArrays;
+import com.google.common.collect.Sets;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
@@ -20,6 +21,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import java.util.Arrays;
+import java.util.HashSet;
 
 import static net.runelite.api.ItemID.*;
 
@@ -32,6 +34,13 @@ import static net.runelite.api.ItemID.*;
 )
 @Slf4j
 public class PatchPaymentPlugin extends Plugin {
+    static final String CONFIG_GROUP = "patchpayment";
+    static final String CHECK_EXAMINE = "examinetext";
+    static final String CHECK_BANK = "bankmenuitem";
+    static final String CHECK_VAULT = "seedvaultitem";
+    private static final String CHECK_PAYMENT = "Check";
+    private static final String TAGS_MENU_REMOVE = "Remove";
+    private static final String TAGS_MENU_SET = "Mark";
 
     private final String CHECK_PAYMENT = "Check";
     private final String TAGS_MENU_REMOVE = "Remove";
@@ -101,6 +110,8 @@ public class PatchPaymentPlugin extends Plugin {
             new PaymentPair("8 snape grass", new int[]{POTATO_CACTUS_SEED})
     };
 
+    private final HashSet<Integer> acceptedWidgetIds = Sets.newHashSet();
+
     @Inject
     @Nullable
     private Client client;
@@ -117,37 +128,27 @@ public class PatchPaymentPlugin extends Plugin {
     }
 
     @Override
-    protected void startUp() throws Exception {
-        super.startUp();
+    protected void startUp(){
+        updateConfig();
     }
 
     @Override
-    protected void shutDown() throws Exception {
-        super.shutDown();
+    protected void shutDown()
+    {
+
     }
 
-
     @Subscribe
-    public void onMenuOpened(MenuOpened event) {
-        if (!config.checkWithExamine()) {
-            MenuEntry firstEntry = event.getFirstEntry();
+    public void onConfigChanged(ConfigChanged event)
+    {
+        if(!event.getGroup().equals(CONFIG_GROUP)) return;
+        updateConfig();
+    }
 
-            if (firstEntry == null)
-                return;
-
-            int widgetId = firstEntry.getParam1();
-
-            if (widgetId == WidgetInfo.INVENTORY.getId()) {
-
-                int itemId = firstEntry.getIdentifier();
-                if (itemId == -1)
-                    return;
-
-                for (PairInterface pp : paymentPairList) {
-                    if (pp.checkForId(itemId)) {
-                        ItemComposition itemComposition = client.getItemDefinition(itemId);
-
-                        MenuEntry[] entries = event.getMenuEntries();
+    private void updateConfig()
+    {
+        acceptedWidgetIds.clear();
+        acceptedWidgetIds.add(WidgetInfo.INVENTORY.getId());
 
                         client.createMenuEntry(2)
                                 .setOption(CHECK_PAYMENT)
