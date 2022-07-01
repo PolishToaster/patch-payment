@@ -10,16 +10,21 @@ import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.menus.MenuManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.util.ColorUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Provider;
+import java.awt.Color;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -42,11 +47,7 @@ public class PatchPaymentPlugin extends Plugin {
     private static final String TAGS_MENU_REMOVE = "Remove";
     private static final String TAGS_MENU_SET = "Mark";
 
-    private final String CHECK_PAYMENT = "Check";
-    private final String TAGS_MENU_REMOVE = "Remove";
-    private final String TAGS_MENU_SET = "Mark";
-
-    PairInterface[] paymentPairList = {
+    private final PairInterface[] paymentPairList = {
             // ALLOTMENT PAIRS
             new PaymentPair("2 buckets of compost", new int[]{POTATO_SEED}),
             new PaymentPair("1 full sack of potatoes", new int[]{ONION_SEED}),
@@ -115,10 +116,6 @@ public class PatchPaymentPlugin extends Plugin {
     @Inject
     @Nullable
     private Client client;
-
-    @Inject
-    private Provider<MenuManager> menuManager;
-
     @Inject
     private PatchPaymentConfig config;
 
@@ -150,57 +147,39 @@ public class PatchPaymentPlugin extends Plugin {
         acceptedWidgetIds.clear();
         acceptedWidgetIds.add(WidgetInfo.INVENTORY.getId());
 
-                        client.createMenuEntry(2)
-                                .setOption(CHECK_PAYMENT)
-                                .setTarget("<col=ff9040>" + itemComposition.getName())
-                                .setIdentifier(itemId)
-                                .setParam0(entries[entries.length - 1].getParam0())
-                                .setParam1(widgetId)
-                                .setType(MenuAction.RUNELITE)
-                                .onClick(e -> { displayGameMessage(pp, itemComposition); });
+        if(config.checkInVault())
+        {
+            acceptedWidgetIds.add(WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId());
+            acceptedWidgetIds.add(WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId());
+        }
 
-                        MenuEntry[] currentEntries = client.getMenuEntries();
-                        if (currentEntries[1].getOption().contentEquals(TAGS_MENU_SET) || currentEntries[1].getOption().contentEquals(TAGS_MENU_REMOVE))
-                            return;
-                        return;
-                    }
-                }
-            }
+        if(config.checkInBank())
+        {
+            acceptedWidgetIds.add(WidgetInfo.BANK_ITEM_CONTAINER.getId());
+            acceptedWidgetIds.add(WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId());
         }
     }
 
-    private void displayGameMessage(PairInterface pi, ItemComposition ic) {
+    private void displayGameMessage(PairInterface pi, ItemComposition ic)
+    {
         client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", pi.getMessage(ic), null);
     }
 
     @Subscribe
-    public void onMenuOptionClicked(MenuOptionClicked event) {
-        if (event.getMenuOption().equals("Examine") && config.checkWithExamine()) {
+    public void onMenuOptionClicked(MenuOptionClicked event)
+    {
+        if (event.getWidget() != null && config.checkWithExamine() && event.getMenuOption().equals("Examine") )
+        {
+            final int widgetId = event.getWidget().getId();
 
-            ItemComposition composition = null;
+            if(!acceptedWidgetIds.contains(widgetId)) return;
 
-            int[][] acceptedIds = {
-                    { WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId(), config.checkInBank() ? 1 : 0 },
-                    { WidgetInfo.BANK_ITEM_CONTAINER.getId(), config.checkInBank() ? 1 : 0 },
-                    { WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId(), config.checkInVault() ? 1 : 0 },
-                    { WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId(), config.checkInVault() ? 1 : 0}
-            };
+            ItemComposition composition = client.getItemDefinition(event.getWidget().getItemId());
 
-            for (int i = 0; i < acceptedIds.length; i++) {
-                if (event.getParam1() == acceptedIds[i][0] && acceptedIds[i][1] == 1) {
-                    composition = client.getItemDefinition(client.getWidget(acceptedIds[i][0]).getChild(event.getParam0()).getItemId());
-                    break;
-                }
-            }
-
-            if (event.getParam1() == WidgetInfo.INVENTORY.getId())
-                composition = client.getItemDefinition(event.getId());
-
-            if (composition == null)
-                return;
-
-            for (PairInterface pp : paymentPairList) {
-                if (pp.checkForId(composition.getId())) {
+            for (PairInterface pp : paymentPairList)
+            {
+                if (pp.checkForId(composition.getId()))
+                {
                     displayGameMessage(pp, composition);
                 }
             }
@@ -208,44 +187,31 @@ public class PatchPaymentPlugin extends Plugin {
     }
 
     @Subscribe
-    public void onMenuEntryAdded(MenuEntryAdded event) {
-        if (!config.checkWithExamine()) {
-            MenuEntry[] entries = client.getMenuEntries();
-            if (event.getOption().equals("Examine")) {
-                Widget container = null;
-                Widget item = null;
+    public void onMenuEntryAdded(MenuEntryAdded event)
+    {
+        if (event.getMenuEntry().getWidget() != null && !config.checkWithExamine())
+        {
+            if (event.getOption().equals("Examine"))
+            {
+                if(!acceptedWidgetIds.contains(event.getMenuEntry().getWidget().getId()))
+                    return;
 
-                int[][] acceptedIds = {
-                        { WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId(), config.checkInBank() ? 1 : 0 },
-                        { WidgetInfo.BANK_ITEM_CONTAINER.getId(), config.checkInBank() ? 1 : 0 },
-                        { WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId(), config.checkInVault() ? 1 : 0 },
-                        { WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId(), config.checkInVault() ? 1 : 0}
-                };
+                int itemid = event.getMenuEntry().getWidget().getItemId();
 
-                for (int i = 0; i < acceptedIds.length; i++) {
-                    if (event.getActionParam1() == acceptedIds[i][0] && acceptedIds[i][1] == 1) {
-                        container = client.getWidget(acceptedIds[i][0]);
-                        item = container.getChild(event.getActionParam0());
-                    }
-                }
+                    for (PairInterface pp : paymentPairList)
+                    {
+                        if (pp.checkForId(itemid))
+                        {
+                            ItemComposition ic = client.getItemDefinition(itemid);
 
-                if (container != null && item != null) {
-                    for (PairInterface pp : paymentPairList) {
-                        if (pp.checkForId(item.getItemId())) {
-                            ItemComposition ic = client.getItemDefinition(item.getItemId());
-
-                            client.createMenuEntry(entries.length - 1)
+                            client.createMenuEntry(-1)
                                     .setOption(CHECK_PAYMENT)
                                     .setTarget(event.getTarget())
-                                    .setIdentifier(event.getIdentifier())
-                                    .setParam0(event.getActionParam0())
-                                    .setParam1(event.getActionParam1())
                                     .setType(MenuAction.RUNELITE)
                                     .onClick(e -> { displayGameMessage(pp, ic); });
 
                             return;
                         }
-                    }
                 }
             }
         }
