@@ -1,31 +1,24 @@
 package com.patchpayment;
 
-import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.MenuEntryAdded;
-import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.client.chat.ChatColorType;
+import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.menus.MenuManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.util.ColorUtil;
-import org.apache.commons.lang3.ArrayUtils;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import javax.inject.Provider;
-import java.awt.Color;
-import java.util.Arrays;
 import java.util.HashSet;
 
 import static net.runelite.api.ItemID.*;
@@ -116,6 +109,9 @@ public class PatchPaymentPlugin extends Plugin {
     @Inject
     @Nullable
     private Client client;
+
+    @Inject
+    private ChatMessageManager chatMessageManager;
     @Inject
     private PatchPaymentConfig config;
 
@@ -162,7 +158,10 @@ public class PatchPaymentPlugin extends Plugin {
 
     private void displayGameMessage(PairInterface pi, ItemComposition ic)
     {
-        client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", pi.getMessage(ic), null);
+        chatMessageManager.queue(QueuedMessage.builder()
+                        .type(ChatMessageType.CONSOLE)
+                        .runeLiteFormattedMessage(pi.getMessage(ic))
+                        .build());
     }
 
     @Subscribe
@@ -252,7 +251,18 @@ public class PatchPaymentPlugin extends Plugin {
             String text = ic.getName();
             if (getPreferredName() != null)
                 text = getPreferredName();
-            return String.format("A farmer will watch over %s %s patch for %s.", grammatify(text), stripAndShrink(text), this.payment);
+            return new ChatMessageBuilder()
+                    .append(ChatColorType.NORMAL)
+                    .append("A farmer will watch over ")
+                    .append(grammatify(text))
+                    .append(" ")
+                    .append(ChatColorType.HIGHLIGHT)
+                    .append(stripAndShrink(text))
+                    .append(ChatColorType.NORMAL)
+                    .append(" patch for ")
+                    .append(ChatColorType.HIGHLIGHT)
+                    .append(this.payment)
+                    .build();
         }
 
         public String getPreferredName() {
@@ -292,7 +302,20 @@ public class PatchPaymentPlugin extends Plugin {
             String text = ic.getName();
             if (getPreferredName() != null)
                 text = getPreferredName();
-            return String.format("%s %s patch can NOT be protected by a farmer%s.", grammatify(text).replace('a', 'A'), stripAndShrink(text), this.message);
+            return new ChatMessageBuilder()
+                    .append(ChatColorType.NORMAL)
+                    .append(grammatify(text).replace('a', 'A'))
+                    .append(" ")
+                    .append(ChatColorType.HIGHLIGHT)
+                    .append(stripAndShrink(text))
+                    .append(ChatColorType.NORMAL)
+                    .append(" patch can ")
+                    .append(ChatColorType.HIGHLIGHT)
+                    .append("NOT")
+                    .append(ChatColorType.NORMAL)
+                    .append(" be protected by a farmer")
+                    .append(this.message)
+                    .build();
         }
 
         public String getPreferredName() {
