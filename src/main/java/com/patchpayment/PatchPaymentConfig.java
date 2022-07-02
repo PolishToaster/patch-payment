@@ -4,13 +4,11 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
-import java.util.Locale;
 
-@ConfigGroup("patchpayment")
+@ConfigGroup(PatchPaymentPlugin.CONFIG_GROUP)
 public interface PatchPaymentConfig extends Config {
-
 	@ConfigItem(
-			keyName = "examinetext",
+			keyName = PatchPaymentPlugin.CHECK_EXAMINE,
 			name = "Check Payment With Examine",
 			description = "Examine an item to see what the payment is and remove the 'Check' menu option.",
 			position = 1
@@ -18,7 +16,7 @@ public interface PatchPaymentConfig extends Config {
 	default boolean checkWithExamine() { return false; }
 
 	@ConfigItem(
-			keyName = "bankmenuitem",
+			keyName = PatchPaymentPlugin.CHECK_BANK,
 			name = "Enable Check in Bank",
 			description = "Enables the ability to check payments while in the bank interface.",
 			position = 2
@@ -26,7 +24,7 @@ public interface PatchPaymentConfig extends Config {
 	default boolean checkInBank() { return false; }
 
 	@ConfigItem(
-			keyName = "seedvaultitem",
+			keyName = PatchPaymentPlugin.CHECK_VAULT,
 			name = "Enable Check in Seed Vault",
 			description = "Enables the ability to check payments while in the seed vault interface.",
 			position = 3
