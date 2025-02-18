@@ -29,7 +29,6 @@ import static net.runelite.api.ItemID.*;
         name = "Patch Payment",
         description = "Creates a menu item to check a seed's required payment.",
         tags = {"farming", "payment"},
-        loadWhenOutdated = true,
         enabledByDefault = false
 )
 @Slf4j
@@ -67,7 +66,7 @@ public class PatchPaymentPlugin extends Plugin {
         // FLOWER SEEDS
         add(builder, new CustomPair(new int[] {MARIGOLD_SEED, ROSEMARY_SEED, NASTURTIUM_SEED, WOAD_SEED, LIMPWURT_SEED, WHITE_LILY_SEED}));
         // HERB PAIRS
-        add(builder, new CustomPair(new int[] {GUAM_SEED, MARRENTILL_SEED, TARROMIN_SEED, HARRALANDER_SEED, GOUT_TUBER, RANARR_SEED, TOADFLAX_SEED, IRIT_SEED, AVANTOE_SEED, KWUARM_SEED, SNAPDRAGON_SEED, CADANTINE_SEED, LANTADYME_SEED, DWARF_WEED_SEED, TORSTOL_SEED}));
+        add(builder, new CustomPair(new int[] {GUAM_SEED, MARRENTILL_SEED, TARROMIN_SEED, HARRALANDER_SEED, GOUT_TUBER, RANARR_SEED, TOADFLAX_SEED, IRIT_SEED, AVANTOE_SEED, KWUARM_SEED, SNAPDRAGON_SEED, HUASCA_SEED, CADANTINE_SEED, LANTADYME_SEED, DWARF_WEED_SEED, TORSTOL_SEED}));
         // HOPS PAIRS
         add(builder, new PaymentPair("3 buckets of compost", new int[] {BARLEY_SEED}));
         add(builder, new PaymentPair("1 marigold", new int[] {HAMMERSTONE_SEED}, "hammerstone hops"));
