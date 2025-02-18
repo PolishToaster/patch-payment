@@ -31,8 +31,7 @@ import static net.runelite.api.ItemID.*;
 @PluginDescriptor(
         name = "Patch Payment",
         description = "Creates a menu item to check a seed's required payment.",
-        tags = {"farming", "payment"},
-        enabledByDefault = false
+        tags = {"farming", "payment"}
 )
 @Slf4j
 public class PatchPaymentPlugin extends Plugin {
