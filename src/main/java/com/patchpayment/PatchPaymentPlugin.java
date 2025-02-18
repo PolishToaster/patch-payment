@@ -7,6 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.widgets.ComponentID;
+import net.runelite.api.widgets.InterfaceID;
+import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
@@ -154,18 +157,18 @@ public class PatchPaymentPlugin extends Plugin {
     private void updateConfig()
     {
         acceptedWidgetIds.clear();
-        acceptedWidgetIds.add(WidgetInfo.INVENTORY.getId());
+        acceptedWidgetIds.add(ComponentID.INVENTORY_CONTAINER);
 
         if(config.checkInVault())
         {
-            acceptedWidgetIds.add(WidgetInfo.SEED_VAULT_ITEM_CONTAINER.getId());
-            acceptedWidgetIds.add(WidgetInfo.SEED_VAULT_INVENTORY_ITEMS_CONTAINER.getId());
+            acceptedWidgetIds.add(ComponentID.SEED_VAULT_ITEM_CONTAINER);
+            acceptedWidgetIds.add(ComponentID.SEED_VAULT_INVENTORY_ITEM_CONTAINER);
         }
 
         if(config.checkInBank())
         {
-            acceptedWidgetIds.add(WidgetInfo.BANK_ITEM_CONTAINER.getId());
-            acceptedWidgetIds.add(WidgetInfo.BANK_INVENTORY_ITEMS_CONTAINER.getId());
+            acceptedWidgetIds.add(ComponentID.BANK_ITEM_CONTAINER);
+            acceptedWidgetIds.add(ComponentID.BANK_INVENTORY_ITEM_CONTAINER);
         }
     }
 
@@ -188,6 +191,7 @@ public class PatchPaymentPlugin extends Plugin {
 
             if(!acceptedWidgetIds.contains(widgetId)) return;
 
+            assert client != null;
             ItemComposition composition = client.getItemDefinition(event.getWidget().getItemId());
             int itemId = composition.getId();
 
@@ -211,9 +215,10 @@ public class PatchPaymentPlugin extends Plugin {
 
             if (payments.containsKey(itemId))
             {
+                assert client != null;
                 ItemComposition ic = client.getItemDefinition(itemId);
 
-                client.createMenuEntry(-1)
+                client.getMenu().createMenuEntry(-1)
                         .setOption(CHECK_PAYMENT)
                         .setTarget(event.getTarget())
                         .setType(MenuAction.RUNELITE)
