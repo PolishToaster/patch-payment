@@ -30,4 +30,12 @@ public interface PatchPaymentConfig extends Config {
 			position = 3
 	)
 	default boolean checkInVault() { return false; }
+
+	@ConfigItem(
+			keyName = PatchPaymentPlugin.CHECK_BOX,
+			name = "Enable Check in Seed Box",
+			description = "Enables the ability to check payments while in the seed box interface.",
+			position = 4
+	)
+	default boolean checkInBox() { return false; }
 }
